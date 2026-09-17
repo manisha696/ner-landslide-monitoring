@@ -1,16 +1,14 @@
 import os
-import json
-import joblib
-import numpy as np
+import pandas as pd
 import xgboost as xgb
 
 from live_risk import get_weather_features
-from terrain_test import find_dem_tile, get_terrain
+from terrain_test import get_terrain
 
 
-# ============================================================
-# CONFIGURATION
-# ============================================================
+# =========================================================
+# PATH
+# =========================================================
 
 BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
@@ -23,38 +21,124 @@ MODEL_FILE = os.path.join(
     "xgboost_no_coordinates_model.json"
 )
 
-# ============================================================
-# MODEL LOADING
-# ============================================================
 
-def load_model():
+# =========================================================
+# LOAD XGBOOST MODEL
+# =========================================================
 
-    print("\nLoading trained XGBoost model...")
+print("")
+print("==============================================")
+print("NER XGBOOST MODEL")
+print("==============================================")
 
-    model = xgb.XGBClassifier()
+print(
+    f"Loading model from: {MODEL_FILE}",
+    flush=True
+)
 
-    model.load_model(MODEL_FILE)
+model = xgb.XGBClassifier()
 
-    print("XGBoost model loaded successfully.")
+model.load_model(
+    MODEL_FILE
+)
 
-    return model
+print(
+    "XGBoost model loaded successfully.",
+    flush=True
+)
 
 
-# ============================================================
-# BUILD MODEL FEATURES
-# ============================================================
+# =========================================================
+# LIVE PREDICTION
+# =========================================================
 
-def build_features(weather, terrain):
+def predict_live_risk(lat, lon):
+
+    print("")
+    print("==============================================")
+    print("STARTING LIVE PREDICTION")
+    print("==============================================")
+
+    print(
+        f"Latitude : {lat}",
+        flush=True
+    )
+
+    print(
+        f"Longitude: {lon}",
+        flush=True
+    )
+
+
+    # =====================================================
+    # WEATHER
+    # =====================================================
+
+    print("")
+    print("STEP 1: Fetching weather...", flush=True)
+
+    weather = get_weather_features(
+        lat,
+        lon
+    )
+
+    print(
+        "STEP 1 COMPLETE: Weather received",
+        flush=True
+    )
+
+    print(
+        weather,
+        flush=True
+    )
+
+
+    # =====================================================
+    # TERRAIN
+    # =====================================================
+
+    print("")
+    print("STEP 2: Getting terrain...", flush=True)
+
+    terrain = get_terrain(
+        lat,
+        lon
+    )
+
+    print(
+        "STEP 2 COMPLETE: Terrain received",
+        flush=True
+    )
+
+    print(
+        terrain,
+        flush=True
+    )
+
+
+    # =====================================================
+    # FEATURES
+    # =====================================================
+
+    print("")
+    print("STEP 3: Creating model features...", flush=True)
 
     features = {
 
-        # ---------------- WEATHER ----------------
+        "rain_1d_mm":
+            weather["rain_1d_mm"],
 
-        "rain_1d_mm": weather["rain_1d_mm"],
-        "rain_3d_mm": weather["rain_3d_mm"],
-        "rain_7d_mm": weather["rain_7d_mm"],
-        "rain_14d_mm": weather["rain_14d_mm"],
-        "rain_30d_mm": weather["rain_30d_mm"],
+        "rain_3d_mm":
+            weather["rain_3d_mm"],
+
+        "rain_7d_mm":
+            weather["rain_7d_mm"],
+
+        "rain_14d_mm":
+            weather["rain_14d_mm"],
+
+        "rain_30d_mm":
+            weather["rain_30d_mm"],
 
         "max_rain_30d_mm":
             weather["max_rain_30d_mm"],
@@ -74,8 +158,6 @@ def build_features(weather, terrain):
         "wind_speed_mps":
             weather["wind_speed_mps"],
 
-        # ---------------- TERRAIN ----------------
-
         "elevation":
             terrain["elevation"],
 
@@ -86,109 +168,55 @@ def build_features(weather, terrain):
             terrain["aspect"]
     }
 
-    return features
 
-
-# ============================================================
-# LIVE RISK PREDICTION
-# ============================================================
-
-def predict_live_risk(lat, lon):
-
-    print("\n========================================")
-    print("REAL-TIME LANDSLIDE RISK ENGINE")
-    print("========================================")
-
-    print(f"Latitude : {lat}")
-    print(f"Longitude: {lon}")
-
-    # --------------------------------------------------------
-    # 1. LIVE WEATHER
-    # --------------------------------------------------------
-
-    print("\nFetching live weather...")
-
-    weather = get_weather_features(
-        lat,
-        lon
+    X = pd.DataFrame(
+        [features]
     )
 
-    # --------------------------------------------------------
-    # 2. REAL TERRAIN
-    # --------------------------------------------------------
 
-    print("Extracting terrain from SRTM...")
-
-    dem_file = find_dem_tile(
-        lat,
-        lon
+    print(
+        "Features created:",
+        flush=True
     )
 
-    if dem_file is None:
-
-        raise Exception(
-            "No DEM tile found for this location."
-        )
-
-    terrain = get_terrain(
-        lat,
-        lon
+    print(
+        X.to_dict(orient="records")[0],
+        flush=True
     )
 
-    # --------------------------------------------------------
-    # 3. BUILD FEATURES
-    # --------------------------------------------------------
 
-    features = build_features(
-        weather,
-        terrain
+    # =====================================================
+    # XGBOOST
+    # =====================================================
+
+    print("")
+    print(
+        "STEP 4: Running XGBoost prediction...",
+        flush=True
     )
 
-    # --------------------------------------------------------
-    # 4. LOAD MODEL
-    # --------------------------------------------------------
+    probability = model.predict_proba(
+        X
+    )[0][1]
 
-    model = load_model()
 
-    # --------------------------------------------------------
-    # 5. PREPARE FEATURE VECTOR
-    # --------------------------------------------------------
-
-    feature_names = [
-        "rain_1d_mm",
-        "rain_3d_mm",
-        "rain_7d_mm",
-        "rain_14d_mm",
-        "rain_30d_mm",
-        "max_rain_30d_mm",
-        "avg_rain_7d_mm",
-        "avg_rain_30d_mm",
-        "temperature_C",
-        "humidity_percent",
-        "wind_speed_mps",
-        "elevation",
-        "slope",
-        "aspect"
-    ]
-
-    X = np.array([
-        features[name]
-        for name in feature_names
-    ]).reshape(1, -1)
-
-    # --------------------------------------------------------
-    # 6. XGBOOST PREDICTION
-    # --------------------------------------------------------
-
-    probability = float(
-        model.predict_proba(X)[0][1]
+    print(
+        "STEP 4 COMPLETE: XGBoost prediction finished",
+        flush=True
     )
+
+    print(
+        f"Probability: {probability}",
+        flush=True
+    )
+
+
+    # =====================================================
+    # RISK LEVEL
+    # =====================================================
 
     risk_percent = probability * 100
 
-    # --------------------------------------------------------
-    # 7. RISK LEVEL
-    # --------------------------------------------------------
 
     if risk_percent < 25:
 
@@ -206,96 +234,43 @@ def predict_live_risk(lat, lon):
 
         risk_level = "VERY HIGH"
 
-    # --------------------------------------------------------
+
+    print("")
+    print(
+        f"FINAL RISK: {risk_level} ({risk_percent:.2f}%)",
+        flush=True
+    )
+
+
+    # =====================================================
     # RESULT
-    # --------------------------------------------------------
+    # =====================================================
 
-    print("\n========================================")
-    print("LIVE LANDSLIDE RISK RESULT")
-    print("========================================")
+    result = {
 
-    print(
-        f"Risk Probability : {risk_percent:.2f}%"
-    )
-
-    print(
-        f"Risk Level       : {risk_level}"
-    )
-
-    print("\nLIVE WEATHER")
-    print("----------------------------------------")
-
-    print(
-        f"Rain 1 day      : {weather['rain_1d_mm']:.2f} mm"
-    )
-
-    print(
-        f"Rain 3 days     : {weather['rain_3d_mm']:.2f} mm"
-    )
-
-    print(
-        f"Rain 7 days     : {weather['rain_7d_mm']:.2f} mm"
-    )
-
-    print(
-        f"Rain 14 days    : {weather['rain_14d_mm']:.2f} mm"
-    )
-
-    print(
-        f"Rain 30 days    : {weather['rain_30d_mm']:.2f} mm"
-    )
-
-    print(
-        f"Temperature     : {weather['temperature_C']:.2f} °C"
-    )
-
-    print(
-        f"Humidity        : {weather['humidity_percent']:.2f}%"
-    )
-
-    print(
-        f"Wind            : {weather['wind_speed_mps']:.2f} m/s"
-    )
-
-    print("\nREAL TERRAIN")
-    print("----------------------------------------")
-
-    print(
-        f"Elevation       : {terrain['elevation']:.2f} m"
-    )
-
-    print(
-        f"Slope           : {terrain['slope']:.2f}°"
-    )
-
-    print(
-        f"Aspect          : {terrain['aspect']:.2f}°"
-    )
-
-    print("========================================")
-
-    return {
         "latitude": lat,
+
         "longitude": lon,
-        "risk_probability": probability,
-        "risk_percent": risk_percent,
+
         "risk_level": risk_level,
+
+        "risk_percent": risk_percent,
+
+        "risk_probability": probability,
+
         "weather": weather,
-        "terrain": terrain
+
+        "terrain": terrain,
+
+        "model": "XGBoost",
+
+        "status": "success"
     }
 
 
-# ============================================================
-# TEST
-# ============================================================
+    print("")
+    print("==============================================")
+    print("LIVE PREDICTION COMPLETED")
+    print("==============================================")
 
-if __name__ == "__main__":
-
-    # Test location
-    lat = 25.5007
-    lon = 93.9854
-
-    predict_live_risk(
-        lat,
-        lon
-    )
+    return result
