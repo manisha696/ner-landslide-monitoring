@@ -1,34 +1,80 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
+import os
 
 from live_prediction import predict_live_risk
 
 
-app = Flask(__name__)
+# ============================================================
+# PATHS
+# ============================================================
+
+BASE_DIR = os.path.dirname(
+    os.path.abspath(__file__)
+)
+
+PROJECT_DIR = os.path.dirname(
+    BASE_DIR
+)
+
+WEB_DIR = os.path.join(
+    PROJECT_DIR,
+    "web"
+)
+
+
+# ============================================================
+# FLASK
+# ============================================================
+
+app = Flask(
+    __name__,
+    static_folder=WEB_DIR,
+    static_url_path=""
+)
 
 CORS(app)
 
 
 # ============================================================
-# ROOT
+# WEBSITE
 # ============================================================
 
 @app.route("/", methods=["GET"])
 def home():
 
-    return jsonify({
-        "service": "NER Live Landslide Risk API",
-        "status": "online",
-        "message": "NER Landslide Monitoring Backend is running",
-        "endpoints": {
-            "health": "/health",
-            "live_risk": "/live-risk?lat=25.5007&lon=93.9854"
-        }
-    })
+    return send_from_directory(
+        WEB_DIR,
+        "index.html"
+    )
 
 
 # ============================================================
-# HEALTH CHECK
+# OTHER FRONTEND FILES
+# ============================================================
+
+@app.route("/<path:filename>")
+def frontend_files(filename):
+
+    file_path = os.path.join(
+        WEB_DIR,
+        filename
+    )
+
+    if os.path.isfile(file_path):
+
+        return send_from_directory(
+            WEB_DIR,
+            filename
+        )
+
+    return jsonify({
+        "error": "File not found"
+    }), 404
+
+
+# ============================================================
+# HEALTH
 # ============================================================
 
 @app.route("/health", methods=["GET"])
@@ -40,14 +86,18 @@ def health():
 
         "service":
             "NER Live Landslide Risk API"
+
     })
 
 
 # ============================================================
-# LIVE LANDSLIDE RISK
+# LIVE RISK
 # ============================================================
 
-@app.route("/live-risk", methods=["GET"])
+@app.route(
+    "/live-risk",
+    methods=["GET"]
+)
 def live_risk():
 
     try:
@@ -63,10 +113,6 @@ def live_risk():
         )
 
 
-        # ----------------------------------------------------
-        # CHECK COORDINATES
-        # ----------------------------------------------------
-
         if lat is None or lon is None:
 
             return jsonify({
@@ -77,9 +123,7 @@ def live_risk():
             }), 400
 
 
-        # ----------------------------------------------------
-        # NER REGION CHECK
-        # ----------------------------------------------------
+        # NER bounding box
 
         if not (
             21 <= lat <= 30
@@ -112,10 +156,6 @@ def live_risk():
             "Running live prediction..."
         )
 
-
-        # ----------------------------------------------------
-        # MODEL PREDICTION
-        # ----------------------------------------------------
 
         result = predict_live_risk(
             lat,
@@ -167,12 +207,10 @@ def live_risk():
 
 
 # ============================================================
-# LOCAL DEVELOPMENT
+# LOCAL / RENDER START
 # ============================================================
 
 if __name__ == "__main__":
-
-    import os
 
     port = int(
         os.environ.get(
@@ -180,39 +218,6 @@ if __name__ == "__main__":
             5000
         )
     )
-
-
-    print("")
-    print("========================================")
-    print("NER LIVE LANDSLIDE RISK API")
-    print("========================================")
-
-    print(
-        f"Running on port: {port}"
-    )
-
-    print("")
-    print(
-        "Health:"
-    )
-
-    print(
-        "/health"
-    )
-
-    print("")
-    print(
-        "Live Risk:"
-    )
-
-    print(
-        "/live-risk?lat=25.5007&lon=93.9854"
-    )
-
-    print(
-        "========================================"
-    )
-
 
     app.run(
 

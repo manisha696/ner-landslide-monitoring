@@ -1,0 +1,221 @@
+/* ================================
+   NER LANDSLIDE GIS
+   STYLE.CSS
+================================ */
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f7f6;
+}
+
+/* Top Header */
+
+.header {
+    background: #173f35;
+    color: white;
+    padding: 18px 25px;
+}
+
+.header h1 {
+    margin: 0;
+    font-size: 24px;
+}
+
+.header p {
+    margin: 5px 0 0;
+    font-size: 14px;
+    opacity: 0.85;
+}
+
+/* Control Bar */
+
+.controls {
+    background: white;
+    padding: 12px 20px;
+    border-bottom: 1px solid #ddd;
+}
+
+.controls button {
+    padding: 9px 16px;
+    margin-right: 6px;
+    border: 1px solid #ccc;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.controls button:hover {
+    background: #e8f1ed;
+}
+
+/* Map */
+
+#map {
+    width: 100%;
+    height: calc(100vh - 145px);
+    min-height: 550px;
+}
+
+/* Leaflet popup */
+
+.leaflet-popup-content {
+    font-size: 14px;
+}
+
+/* Legend */
+
+.legend {
+    background: white;
+    padding: 12px 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    line-height: 25px;
+}
+
+.legend-title {
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.legend-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.low {
+    background: #16a34a;
+}
+
+.moderate {
+    background: #eab308;
+}
+
+.high {
+    background: #ea580c;
+}
+
+.very-high {
+    background: #b91c1c;
+}
+/* =================================
+   RISK SUMMARY CARDS
+================================= */
+
+.dashboard {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    padding: 15px 20px;
+    background: #f4f7f6;
+}
+
+.stat-card {
+    background: white;
+    padding: 15px;
+    border-radius: 10px;
+    border-left: 5px solid #64748b;
+    box-shadow: 0 2px 7px rgba(0, 0, 0, 0.08);
+}
+
+.stat-card span {
+    display: block;
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.stat-card strong {
+    font-size: 25px;
+    color: #1f2937;
+}
+
+.low-card {
+    border-left-color: #16a34a;
+}
+
+.moderate-card {
+    border-left-color: #eab308;
+}
+
+.high-card {
+    border-left-color: #ea580c;
+}
+
+.very-high-card {
+    border-left-color: #b91c1c;
+}
+
+
+/* Mobile */
+
+@media (max-width: 800px) {
+
+    .dashboard {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+}
+/* =================================
+   LOCATION SEARCH
+================================= */
+
+.search-box {
+    position: absolute;
+    top: 165px;
+    left: 20px;
+    z-index: 1000;
+
+    display: flex;
+    gap: 6px;
+
+    background: white;
+    padding: 8px;
+
+    border-radius: 8px;
+
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+}
+
+.search-box input {
+    width: 230px;
+
+    padding: 10px;
+
+    border: 1px solid #ccc;
+
+    border-radius: 5px;
+
+    outline: none;
+}
+
+.search-box button {
+    padding: 10px 14px;
+
+    border: none;
+
+    border-radius: 5px;
+
+    background: #173f35;
+
+    color: white;
+
+    cursor: pointer;
+}
+
+.search-box button:hover {
+    background: #245c4d;
+}

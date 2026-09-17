@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>NER Landslide Risk Monitoring</title>
+
+    <!-- Leaflet CSS -->
+    <link
+        rel="stylesheet"
+        href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    >
+
+    <!-- Our CSS -->
+    <link
+        rel="stylesheet"
+        href="style.css"
+    >
+
+</head>
+
+
+<body>
+
+    <!-- ================= HEADER ================= -->
+
+    <header class="header">
+
+        <h1>
+            NER Landslide Risk Monitoring System
+        </h1>
+
+        <p>
+            AI-Based Early Warning & GIS Risk Visualization
+        </p>
+
+    </header>
+
+
+    <!-- ================= FILTER BUTTONS ================= -->
+     <!-- RISK SUMMARY -->
+
+<div class="dashboard">
+
+    <div class="stat-card total">
+        <span>Total Locations</span>
+        <strong id="totalCount">0</strong>
+    </div>
+
+    <div class="stat-card low-card">
+        <span>Low Risk</span>
+        <strong id="lowCount">0</strong>
+    </div>
+
+    <div class="stat-card moderate-card">
+        <span>Moderate</span>
+        <strong id="moderateCount">0</strong>
+    </div>
+
+    <div class="stat-card high-card">
+        <span>High Risk</span>
+        <strong id="highCount">0</strong>
+    </div>
+
+    <div class="stat-card very-high-card">
+        <span>Very High</span>
+        <strong id="veryHighCount">0</strong>
+    </div>
+
+</div>
+
+    <div class="controls">
+
+        <button onclick="showAll()">
+            All
+        </button>
+
+        <button onclick="showLow()">
+            Low Risk
+        </button>
+
+        <button onclick="showModerate()">
+            Moderate
+        </button>
+
+        <button onclick="showHigh()">
+            High Risk
+        </button>
+
+        <button onclick="showVeryHigh()">
+            Very High
+        </button>
+
+    </div>
+
+
+    <!-- ================= MAP ================= -->
+     <!-- LOCATION SEARCH -->
+
+<div class="search-box">
+
+    <input
+        type="text"
+        id="locationSearch"
+        placeholder="Search location..."
+    >
+
+    <button onclick="searchLocation()">
+        Search
+    </button>
+
+</div>
+
+    <div id="map"></div>
+
+
+    <!-- Leaflet JS -->
+
+    <script
+        src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+    </script>
+
+
+    <!-- Our JavaScript -->
+
+    <script src="app.js"></script>
+
+
+</body>
+
+</html>

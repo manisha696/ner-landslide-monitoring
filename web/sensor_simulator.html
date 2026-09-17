@@ -1,0 +1,1198 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>
+        Hardware Sensor Simulator
+    </title>
+
+
+    <style>
+
+        * {
+            box-sizing: border-box;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            font-family:
+                Arial,
+                Helvetica,
+                sans-serif;
+
+            background:
+                #f4f7f6;
+
+            color:
+                #1f2937;
+
+        }
+
+
+        /* HEADER */
+
+        .header {
+
+            background:
+                #0f766e;
+
+            color:
+                white;
+
+            padding:
+                18px 30px;
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            box-shadow:
+                0 2px 10px rgba(0,0,0,0.08);
+
+        }
+
+
+        .header h1 {
+
+            margin:
+                0;
+
+            font-size:
+                22px;
+
+        }
+
+
+        .header p {
+
+            margin:
+                5px 0 0;
+
+            font-size:
+                13px;
+
+            opacity:
+                0.9;
+
+        }
+
+
+        .simulation-badge {
+
+            background:
+                #fef3c7;
+
+            color:
+                #92400e;
+
+            padding:
+                8px 14px;
+
+            border-radius:
+                20px;
+
+            font-size:
+                12px;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        /* MAIN */
+
+        .container {
+
+            max-width:
+                1200px;
+
+            margin:
+                25px auto;
+
+            padding:
+                0 20px;
+
+        }
+
+
+        /* LOCATION */
+
+        .location-card {
+
+            background:
+                white;
+
+            border-radius:
+                12px;
+
+            padding:
+                20px;
+
+            margin-bottom:
+                20px;
+
+            box-shadow:
+                0 2px 10px rgba(0,0,0,0.06);
+
+        }
+
+
+        .location-card h2 {
+
+            margin-top:
+                0;
+
+            color:
+                #115e59;
+
+        }
+
+
+        .location-grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(3, 1fr);
+
+            gap:
+                15px;
+
+        }
+
+
+        .location-item {
+
+            background:
+                #f0fdfa;
+
+            padding:
+                12px;
+
+            border-radius:
+                8px;
+
+        }
+
+
+        .location-item span {
+
+            display:
+                block;
+
+            font-size:
+                12px;
+
+            color:
+                #64748b;
+
+            margin-bottom:
+                4px;
+
+        }
+
+
+        .location-item strong {
+
+            font-size:
+                15px;
+
+        }
+
+
+        /* SENSOR GRID */
+
+        .section-title {
+
+            margin:
+                25px 0 12px;
+
+            color:
+                #115e59;
+
+        }
+
+
+        .sensor-grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(4, 1fr);
+
+            gap:
+                15px;
+
+        }
+
+
+        .sensor-card {
+
+            background:
+                white;
+
+            border-radius:
+                12px;
+
+            padding:
+                18px;
+
+            box-shadow:
+                0 2px 10px rgba(0,0,0,0.06);
+
+            border-left:
+                4px solid #0f766e;
+
+        }
+
+
+        .sensor-name {
+
+            font-size:
+                13px;
+
+            color:
+                #64748b;
+
+            margin-bottom:
+                8px;
+
+        }
+
+
+        .sensor-value {
+
+            font-size:
+                28px;
+
+            font-weight:
+                bold;
+
+            color:
+                #0f766e;
+
+        }
+
+
+        .sensor-unit {
+
+            font-size:
+                12px;
+
+            color:
+                #64748b;
+
+        }
+
+
+        .sensor-status {
+
+            margin-top:
+                10px;
+
+            font-size:
+                11px;
+
+            color:
+                #15803d;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        /* RISK */
+
+        .risk-card {
+
+            background:
+                white;
+
+            border-radius:
+                12px;
+
+            padding:
+                25px;
+
+            margin-top:
+                25px;
+
+            box-shadow:
+                0 2px 10px rgba(0,0,0,0.06);
+
+            text-align:
+                center;
+
+        }
+
+
+        .risk-score {
+
+            font-size:
+                48px;
+
+            font-weight:
+                bold;
+
+            margin:
+                10px 0;
+
+        }
+
+
+        .risk-level {
+
+            display:
+                inline-block;
+
+            padding:
+                10px 25px;
+
+            border-radius:
+                25px;
+
+            color:
+                white;
+
+            font-weight:
+                bold;
+
+        }
+
+
+        /* FOOTER */
+
+        .footer {
+
+            margin-top:
+                25px;
+
+            padding:
+                15px;
+
+            background:
+                #ecfdf5;
+
+            border:
+                1px solid #a7f3d0;
+
+            border-radius:
+                10px;
+
+            font-size:
+                13px;
+
+            color:
+                #065f46;
+
+            text-align:
+                center;
+
+        }
+
+
+        @media(max-width:900px) {
+
+            .sensor-grid {
+
+                grid-template-columns:
+                    repeat(2, 1fr);
+
+            }
+
+            .location-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+        }
+
+
+        @media(max-width:600px) {
+
+            .sensor-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+            .header {
+
+                flex-direction:
+                    column;
+
+                align-items:
+                    flex-start;
+
+                gap:
+                    10px;
+
+            }
+
+        }
+
+    </style>
+
+</head>
+
+
+<body>
+
+
+<!-- ================================================= -->
+<!-- HEADER -->
+<!-- ================================================= -->
+
+<div class="header">
+
+    <div>
+
+        <h1>
+             Hardware Sensor Simulator
+        </h1>
+
+        <p>
+            Smart Hardware Sensor Telemetry Dashboard
+        </p>
+
+    </div>
+
+
+    <div class="simulation-badge">
+
+        SIMULATION MODE
+
+    </div>
+
+</div>
+
+
+<div class="container">
+
+
+    <!-- ================================================= -->
+    <!-- LOCATION -->
+    <!-- ================================================= -->
+
+    <div class="location-card">
+
+        <h2>
+            Monitoring Location
+        </h2>
+
+
+        <div class="location-grid">
+
+
+            <div class="location-item">
+
+                <span>
+                    Location
+                </span>
+
+                <strong>
+                    Kasara Ghat Region
+                </strong>
+
+            </div>
+
+
+            <div class="location-item">
+
+                <span>
+                    Latitude
+                </span>
+
+                <strong id="latitude">
+                    19.65
+                </strong>
+
+            </div>
+
+
+            <div class="location-item">
+
+                <span>
+                    Longitude
+                </span>
+
+                <strong id="longitude">
+                    73.48
+                </strong>
+
+            </div>
+
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- SENSOR DATA -->
+    <!-- ================================================= -->
+
+    <h2 class="section-title">
+
+        Live Hardware Telemetry
+
+    </h2>
+
+
+    <div class="sensor-grid">
+
+
+        <!-- SOIL MOISTURE -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                Soil Moisture
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="soilMoisture">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    %
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                SENSOR ONLINE
+            </div>
+
+        </div>
+
+
+        <!-- RAIN -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                Rainfall Intensity
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="rainfall">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    mm/h
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                RAIN SENSOR ONLINE
+            </div>
+
+        </div>
+
+
+        <!-- TEMPERATURE -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                Temperature
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="temperature">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    °C
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                TEMP SENSOR ONLINE
+            </div>
+
+        </div>
+
+
+        <!-- HUMIDITY -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                Humidity
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="humidity">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    %
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                HUMIDITY SENSOR ONLINE
+            </div>
+
+        </div>
+
+
+        <!-- PRESSURE -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                Atmospheric Pressure
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="pressure">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    hPa
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                PRESSURE SENSOR ONLINE
+            </div>
+
+        </div>
+
+
+        <!-- VIBRATION -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                Ground Vibration
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="vibration">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    g
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                IMU SENSOR ONLINE
+            </div>
+
+        </div>
+
+
+        <!-- TILT -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                Ground Tilt
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="tilt">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    °
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                TILT SENSOR ONLINE
+            </div>
+
+        </div>
+
+
+        <!-- BATTERY -->
+
+        <div class="sensor-card">
+
+            <div class="sensor-name">
+                
+            </div>
+
+            <div class="sensor-value">
+
+                <span id="battery">
+                    --
+                </span>
+
+                <span class="sensor-unit">
+                    
+                </span>
+
+            </div>
+
+            <div class="sensor-status">
+                POWER SYSTEM ONLINE
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- RISK -->
+    <!-- ================================================= -->
+
+    <div class="risk-card">
+
+        <h2>
+            Sensor-Based Risk Indicator
+        </h2>
+
+
+        <div
+            id="riskScore"
+            class="risk-score"
+        >
+            --
+        </div>
+
+
+        <div
+            id="riskLevel"
+            class="risk-level"
+            style="background:#64748b"
+        >
+            CALCULATING
+        </div>
+
+
+        <p id="lastUpdate">
+
+            Waiting for sensor telemetry...
+
+        </p>
+
+    </div>
+
+
+    <!-- ================================================= -->
+    <!-- FOOTER -->
+    <!-- ================================================= -->
+
+    <div class="footer">
+
+        
+       
+
+
+</div>
+
+
+<script>
+
+
+// =====================================================
+// KASARA GHAT APPROXIMATE DEMO LOCATION
+// =====================================================
+
+const baseLatitude = 19.65;
+
+const baseLongitude = 73.48;
+
+
+// =====================================================
+// RANDOM HELPER
+// =====================================================
+
+function randomBetween(min, max) {
+
+    return (
+        Math.random() *
+        (max - min)
+    ) + min;
+
+}
+
+
+// =====================================================
+// UPDATE SENSOR DATA
+// =====================================================
+
+function updateSensors() {
+
+
+    // -------------------------------------------------
+    // SOIL MOISTURE
+    // -------------------------------------------------
+
+    const soilMoisture =
+        randomBetween(
+            62,
+            88
+        );
+
+
+    // -------------------------------------------------
+    // RAINFALL
+    // -------------------------------------------------
+
+    const rainfall =
+        randomBetween(
+            2,
+            14
+        );
+
+
+    // -------------------------------------------------
+    // TEMPERATURE
+    // -------------------------------------------------
+
+    const temperature =
+        randomBetween(
+            22,
+            27
+        );
+
+
+    // -------------------------------------------------
+    // HUMIDITY
+    // -------------------------------------------------
+
+    const humidity =
+        randomBetween(
+            78,
+            96
+        );
+
+
+    // -------------------------------------------------
+    // PRESSURE
+    // -------------------------------------------------
+
+    const pressure =
+        randomBetween(
+            970,
+            990
+        );
+
+
+    // -------------------------------------------------
+    // VIBRATION
+    // -------------------------------------------------
+
+    const vibration =
+        randomBetween(
+            0.02,
+            0.16
+        );
+
+
+    // -------------------------------------------------
+    // TILT
+    // -------------------------------------------------
+
+    const tilt =
+        randomBetween(
+            3,
+            12
+        );
+
+
+    // -------------------------------------------------
+    // BATTERY
+    // -------------------------------------------------
+
+    const battery =
+        randomBetween(
+            78,
+            96
+        );
+
+
+    // -------------------------------------------------
+    // UPDATE HTML
+    // -------------------------------------------------
+
+    document.getElementById(
+        "soilMoisture"
+    ).textContent =
+        soilMoisture.toFixed(1);
+
+
+    document.getElementById(
+        "rainfall"
+    ).textContent =
+        rainfall.toFixed(1);
+
+
+    document.getElementById(
+        "temperature"
+    ).textContent =
+        temperature.toFixed(1);
+
+
+    document.getElementById(
+        "humidity"
+    ).textContent =
+        humidity.toFixed(1);
+
+
+    document.getElementById(
+        "pressure"
+    ).textContent =
+        pressure.toFixed(1);
+
+
+    document.getElementById(
+        "vibration"
+    ).textContent =
+        vibration.toFixed(3);
+
+
+    document.getElementById(
+        "tilt"
+    ).textContent =
+        tilt.toFixed(1);
+
+
+    document.getElementById(
+        "battery"
+    ).textContent =
+        battery.toFixed(1);
+
+
+    // =================================================
+    // DEMO RISK CALCULATION
+    // =================================================
+
+    /*
+        IMPORTANT:
+
+        This is NOT the XGBoost model.
+
+        It is only a visual sensor-risk indicator
+        for the hardware prototype.
+
+        Later this will be replaced by actual
+        ESP32 sensor data + backend processing.
+    */
+
+
+    let risk = 0;
+
+
+    // Soil moisture contribution
+
+    risk +=
+        soilMoisture * 0.30;
+
+
+    // Rain contribution
+
+    risk +=
+        rainfall * 2.0;
+
+
+    // Humidity contribution
+
+    risk +=
+        humidity * 0.10;
+
+
+    // Tilt contribution
+
+    risk +=
+        tilt * 1.5;
+
+
+    // Vibration contribution
+
+    risk +=
+        vibration * 20;
+
+
+    // Limit score
+
+    risk =
+        Math.min(
+            100,
+            Math.max(
+                0,
+                risk
+            )
+        );
+
+
+    let level;
+
+    let color;
+
+
+    if (risk < 35) {
+
+        level = "LOW";
+
+        color = "#15803d";
+
+    }
+
+    else if (risk < 55) {
+
+        level = "MODERATE";
+
+        color = "#ca8a04";
+
+    }
+
+    else if (risk < 75) {
+
+        level = "HIGH";
+
+        color = "#ea580c";
+
+    }
+
+    else {
+
+        level = "VERY HIGH";
+
+        color = "#b91c1c";
+
+    }
+
+
+    // Update risk
+
+    document.getElementById(
+        "riskScore"
+    ).textContent =
+        risk.toFixed(1) + "%";
+
+
+    const riskLevel =
+        document.getElementById(
+            "riskLevel"
+        );
+
+
+    riskLevel.textContent =
+        level;
+
+
+    riskLevel.style.background =
+        color;
+
+
+    // =================================================
+    // LOCATION JITTER
+    // =================================================
+
+    const latitude =
+        baseLatitude +
+        randomBetween(
+            -0.003,
+            0.003
+        );
+
+
+    const longitude =
+        baseLongitude +
+        randomBetween(
+            -0.003,
+            0.003
+        );
+
+
+    document.getElementById(
+        "latitude"
+    ).textContent =
+        latitude.toFixed(5);
+
+
+    document.getElementById(
+        "longitude"
+    ).textContent =
+        longitude.toFixed(5);
+
+
+    // =================================================
+    // TIME
+    // =================================================
+
+    const now =
+        new Date();
+
+
+    document.getElementById(
+        "lastUpdate"
+    ).textContent =
+        "Last telemetry update: " +
+        now.toLocaleTimeString();
+
+}
+
+
+// =====================================================
+// START SIMULATION
+// =====================================================
+
+updateSensors();
+
+
+// Update every 2 seconds
+
+setInterval(
+    updateSensors,
+    2000
+);
+
+
+</script>
+
+
+</body>
+
+</html>
