@@ -1,13 +1,14 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
 import os
+import traceback
 
 from live_prediction import predict_live_risk
 
 
-# ============================================================
+# =========================================================
 # PATHS
-# ============================================================
+# =========================================================
 
 BASE_DIR = os.path.dirname(
     os.path.abspath(__file__)
@@ -23,22 +24,18 @@ WEB_DIR = os.path.join(
 )
 
 
-# ============================================================
-# FLASK
-# ============================================================
+# =========================================================
+# FLASK APP
+# =========================================================
 
-app = Flask(
-    __name__,
-    static_folder=WEB_DIR,
-    static_url_path=""
-)
+app = Flask(__name__)
 
 CORS(app)
 
 
-# ============================================================
-# WEBSITE
-# ============================================================
+# =========================================================
+# HOME / FRONTEND
+# =========================================================
 
 @app.route("/", methods=["GET"])
 def home():
@@ -49,11 +46,7 @@ def home():
     )
 
 
-# ============================================================
-# OTHER FRONTEND FILES
-# ============================================================
-
-@app.route("/<path:filename>")
+@app.route("/<path:filename>", methods=["GET"])
 def frontend_files(filename):
 
     file_path = os.path.join(
@@ -73,32 +66,32 @@ def frontend_files(filename):
     }), 404
 
 
-# ============================================================
-# HEALTH
-# ============================================================
+# =========================================================
+# HEALTH CHECK
+# =========================================================
 
 @app.route("/health", methods=["GET"])
 def health():
 
+    print("HEALTH CHECK RECEIVED", flush=True)
+
     return jsonify({
-
         "status": "online",
-
-        "service":
-            "NER Live Landslide Risk API"
-
+        "service": "NER Live Landslide Risk API"
     })
 
 
-# ============================================================
+# =========================================================
 # LIVE RISK
-# ============================================================
+# =========================================================
 
-@app.route(
-    "/live-risk",
-    methods=["GET"]
-)
+@app.route("/live-risk", methods=["GET"])
 def live_risk():
+
+    print("", flush=True)
+    print("========================================", flush=True)
+    print("LIVE RISK REQUEST RECEIVED", flush=True)
+    print("========================================", flush=True)
 
     try:
 
@@ -112,18 +105,27 @@ def live_risk():
             type=float
         )
 
+        print(
+            f"Received coordinates: {lat}, {lon}",
+            flush=True
+        )
+
+        # -------------------------------------------------
+        # VALIDATION
+        # -------------------------------------------------
 
         if lat is None or lon is None:
 
-            return jsonify({
+            print(
+                "ERROR: Missing latitude or longitude",
+                flush=True
+            )
 
+            return jsonify({
                 "error":
                     "Latitude and longitude are required."
-
             }), 400
 
-
-        # NER bounding box
 
         if not (
             21 <= lat <= 30
@@ -131,74 +133,76 @@ def live_risk():
             88 <= lon <= 98
         ):
 
-            return jsonify({
+            print(
+                "ERROR: Location outside NER",
+                flush=True
+            )
 
+            return jsonify({
                 "error":
                     "Location is outside the supported NER region."
-
             }), 400
 
 
-        print("")
-        print("========================================")
-        print("LIVE RISK REQUEST")
-        print("========================================")
+        # -------------------------------------------------
+        # RUN MODEL
+        # -------------------------------------------------
 
         print(
-            f"Latitude : {lat}"
+            "Calling predict_live_risk()...",
+            flush=True
         )
-
-        print(
-            f"Longitude: {lon}"
-        )
-
-        print(
-            "Running live prediction..."
-        )
-
 
         result = predict_live_risk(
             lat,
             lon
         )
 
-
         print(
-            "Live prediction successful."
+            "predict_live_risk() COMPLETED",
+            flush=True
         )
 
         print(
-            "========================================"
+            f"Result: {result}",
+            flush=True
         )
 
+        print(
+            "========================================",
+            flush=True
+        )
 
         return jsonify(result)
 
 
     except Exception as e:
 
-        print("")
-        print("========================================")
-        print("LIVE RISK ERROR")
-        print("========================================")
+        print("", flush=True)
+        print("========================================", flush=True)
+        print("LIVE RISK ERROR", flush=True)
+        print("========================================", flush=True)
 
         print(
-            type(e).__name__
+            f"Error type: {type(e).__name__}",
+            flush=True
         )
 
         print(
-            str(e)
+            f"Error: {str(e)}",
+            flush=True
         )
+
+        traceback.print_exc()
 
         print(
-            "========================================"
+            "========================================",
+            flush=True
         )
-
 
         return jsonify({
 
-            "error":
-                str(e),
+            "error": str(e),
 
             "error_type":
                 type(e).__name__
@@ -206,9 +210,9 @@ def live_risk():
         }), 500
 
 
-# ============================================================
-# LOCAL / RENDER START
-# ============================================================
+# =========================================================
+# LOCAL SERVER
+# =========================================================
 
 if __name__ == "__main__":
 
@@ -220,10 +224,7 @@ if __name__ == "__main__":
     )
 
     app.run(
-
         host="0.0.0.0",
-
         port=port,
-
         debug=False
     )
