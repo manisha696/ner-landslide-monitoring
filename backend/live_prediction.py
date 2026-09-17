@@ -204,9 +204,9 @@ def predict_live_risk(lat, lon):
         flush=True
     )
 
-    probability = model.predict_proba(
-        X
-    )[0][1]
+    probability = float(
+        model.predict_proba(X)[0][1]
+    )
 
 
     print(
@@ -224,7 +224,9 @@ def predict_live_risk(lat, lon):
     # RISK LEVEL
     # =====================================================
 
-    risk_percent = probability * 100
+    risk_percent = float(
+        probability * 100
+    )
 
 
     if risk_percent < 25:
@@ -256,25 +258,23 @@ def predict_live_risk(lat, lon):
     # =====================================================
 
     result = {
+    "latitude": float(lat),
+    "longitude": float(lon),
 
-        "latitude": lat,
+    "risk_level": risk_level,
 
-        "longitude": lon,
+    "risk_percent": float(risk_percent),
 
-        "risk_level": risk_level,
+    "risk_probability": float(probability),
 
-        "risk_percent": risk_percent,
+    "weather": weather,
 
-        "risk_probability": probability,
+    "terrain": terrain,
 
-        "weather": weather,
+    "model": "XGBoost",
 
-        "terrain": terrain,
-
-        "model": "XGBoost",
-
-        "status": "success"
-    }
+    "status": "success"
+}
 
 
     print("")
