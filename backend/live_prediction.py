@@ -55,19 +55,28 @@ print(
 def predict_live_risk(lat, lon):
 
     print("")
-    print("==============================================")
-    print("STARTING LIVE PREDICTION")
-    print("==============================================")
+    print("==============================================", flush=True)
+    print("STARTING LIVE PREDICTION", flush=True)
+    print("==============================================", flush=True)
 
-    print(
-        f"Latitude : {lat}",
-        flush=True
-    )
+    print(f"Latitude: {lat}", flush=True)
+    print(f"Longitude: {lon}", flush=True)
 
-    print(
-        f"Longitude: {lon}",
-        flush=True
-    )
+    print("ABOUT TO CALL WEATHER FUNCTION", flush=True)
+
+    weather = get_weather_features(lat, lon)
+
+    print("WEATHER FUNCTION RETURNED", flush=True)
+    print(weather, flush=True)
+
+    print("ABOUT TO CALL TERRAIN FUNCTION", flush=True)
+
+    terrain = get_terrain(lat, lon)
+
+    print("TERRAIN FUNCTION RETURNED", flush=True)
+    print(terrain, flush=True)
+
+    # keep the rest of your existing feature/XGBoost code below
 
 
     # =====================================================
