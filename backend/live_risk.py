@@ -1,93 +1,39 @@
 import requests
-import pandas as pd
-from datetime import datetime, timedelta
 import time
-
+from datetime import datetime, timedelta
 
 # ============================================================
 # WEATHER CACHE
 # ============================================================
 
-WEATHER_CACHE = {}
-CACHE_DURATION_SECONDS = 600
+_weather_cache = {}
 
-
-def get_cache_key(lat, lon):
-    return (
-        round(float(lat), 3),
-        round(float(lon), 3)
-    )
-
-
-def get_cached_weather(lat, lon):
-
-    key = get_cache_key(lat, lon)
-
-    if key not in WEATHER_CACHE:
-        return None
-
-    cached_time, cached_data = WEATHER_CACHE[key]
-
-    if time.time() - cached_time < CACHE_DURATION_SECONDS:
-
-        print("Using cached weather data.")
-
-        return cached_data
-
-    del WEATHER_CACHE[key]
-
-    return None
-
-
-def save_cached_weather(lat, lon, data):
-
-    key = get_cache_key(lat, lon)
-
-    WEATHER_CACHE[key] = (
-        time.time(),
-        data
-    )
+CACHE_SECONDS = 600  # 10 minutes
 
 
 # ============================================================
-# OPEN-METEO
+# OPEN-METEO WEATHER
 # ============================================================
 
 def get_open_meteo_weather(lat, lon):
 
+    print("Trying Open-Meteo...")
+
     url = "https://api.open-meteo.com/v1/forecast"
 
     params = {
-
         "latitude": lat,
-
         "longitude": lon,
-
-        "current":
-            "temperature_2m,"
-            "relative_humidity_2m,"
-            "wind_speed_10m",
-
+        "daily": ",".join([
+            "precipitation_sum",
+            "temperature_2m_max",
+            "relative_humidity_2m_mean",
+            "wind_speed_10m_max"
+        ]),
+        "timezone": "UTC",
         "past_days": 30,
-
-        "hourly":
-            "rain",
-
-        "timezone":
-            "auto",
-
-        "temperature_unit":
-            "celsius",
-
-        "wind_speed_unit":
-            "ms",
-
-        "precipitation_unit":
-            "mm"
+        "forecast_days": 1
     }
-
-    print("")
-    print("Trying Open-Meteo...")
 
     response = requests.get(
         url,
@@ -96,143 +42,112 @@ def get_open_meteo_weather(lat, lon):
     )
 
     if response.status_code != 200:
-
         raise Exception(
-            f"Open-Meteo error: "
-            f"{response.status_code}"
+            f"Open-Meteo error: {response.status_code}"
         )
 
     data = response.json()
 
-    current = data["current"]
+    daily = data.get("daily")
 
-    temperature = float(
-        current["temperature_2m"]
+    if not daily:
+        raise Exception("Open-Meteo daily data missing")
+
+    rain = daily.get("precipitation_sum", [])
+
+    temperature = daily.get(
+        "temperature_2m_max",
+        []
     )
 
-    humidity = float(
-        current["relative_humidity_2m"]
+    humidity = daily.get(
+        "relative_humidity_2m_mean",
+        []
     )
 
-    wind_speed = float(
-        current["wind_speed_10m"]
+    wind = daily.get(
+        "wind_speed_10m_max",
+        []
     )
 
-    hourly_time = data["hourly"]["time"]
+    # Remove None values
+    rain_values = [
+        float(x) for x in rain
+        if x is not None
+    ]
 
-    hourly_rain = data["hourly"]["rain"]
+    if not rain_values:
+        raise Exception("Rainfall data missing")
 
-    weather_df = pd.DataFrame({
+    def safe_last(values, default=0.0):
+        valid = [
+            float(x)
+            for x in values
+            if x is not None
+        ]
 
-        "time":
-            pd.to_datetime(
-                hourly_time
-            ),
+        if not valid:
+            return default
 
-        "rain":
-            [
-                0 if value is None
-                else float(value)
+        return valid[-1]
 
-                for value in hourly_rain
-            ]
-    })
+    rain_1d = sum(rain_values[-1:])
+    rain_3d = sum(rain_values[-3:])
+    rain_7d = sum(rain_values[-7:])
+    rain_14d = sum(rain_values[-14:])
+    rain_30d = sum(rain_values[-30:])
 
-    weather_df["date"] = (
-        weather_df["time"].dt.date
+    last_30 = rain_values[-30:]
+
+    max_rain_30d = (
+        max(last_30)
+        if last_30
+        else 0.0
     )
 
-    daily_rain = (
-        weather_df
-        .groupby("date")["rain"]
-        .sum()
-        .reset_index()
-    )
-
-    latest_date = daily_rain["date"].max()
-
-    def rainfall_last_days(days):
-
-        cutoff = (
-            latest_date
-            -
-            timedelta(
-                days=days - 1
-            )
-        )
-
-        values = daily_rain[
-            daily_rain["date"] >= cutoff
-        ]["rain"]
-
-        return float(
-            values.sum()
-        )
-
-    rain_1d = rainfall_last_days(1)
-
-    rain_3d = rainfall_last_days(3)
-
-    rain_7d = rainfall_last_days(7)
-
-    rain_14d = rainfall_last_days(14)
-
-    rain_30d = rainfall_last_days(30)
-
-    max_rain_30d = float(
-        daily_rain["rain"]
-        .tail(30)
-        .max()
-    )
+    last_7 = rain_values[-7:]
 
     avg_rain_7d = (
-        rain_7d / 7
+        sum(last_7) / len(last_7)
+        if last_7
+        else 0.0
     )
 
     avg_rain_30d = (
-        rain_30d / 30
+        sum(last_30) / len(last_30)
+        if last_30
+        else 0.0
     )
 
-    features = {
+    return {
+        "rain_1d_mm": float(rain_1d),
+        "rain_3d_mm": float(rain_3d),
+        "rain_7d_mm": float(rain_7d),
+        "rain_14d_mm": float(rain_14d),
+        "rain_30d_mm": float(rain_30d),
 
-        "rain_1d_mm":
-            rain_1d,
+        "max_rain_30d_mm": float(max_rain_30d),
 
-        "rain_3d_mm":
-            rain_3d,
+        "avg_rain_7d_mm": float(avg_rain_7d),
+        "avg_rain_30d_mm": float(avg_rain_30d),
 
-        "rain_7d_mm":
-            rain_7d,
-
-        "rain_14d_mm":
-            rain_14d,
-
-        "rain_30d_mm":
-            rain_30d,
-
-        "max_rain_30d_mm":
-            max_rain_30d,
-
-        "avg_rain_7d_mm":
-            avg_rain_7d,
-
-        "avg_rain_30d_mm":
-            avg_rain_30d,
-
-        "temperature_C":
+        "temperature_C": safe_last(
             temperature,
+            0.0
+        ),
 
-        "humidity_percent":
+        "humidity_percent": safe_last(
             humidity,
+            0.0
+        ),
 
-        "wind_speed_mps":
-            wind_speed,
+        "wind_speed_mps": safe_last(
+            wind,
+            0.0
+        ),
 
-        "weather_source":
-            "Open-Meteo"
+        "weather_source": "Open-Meteo"
     }
-
-    return features
 
 
 # ============================================================
@@ -241,59 +156,33 @@ def get_open_meteo_weather(lat, lon):
 
 def get_nasa_power_weather(lat, lon):
 
-    print("")
-    print("Open-Meteo unavailable.")
-
-    print(
-        "Trying NASA POWER fallback..."
-    )
+    print("Trying NASA POWER fallback...")
 
     end_date = datetime.utcnow().date()
 
-    start_date = (
-        end_date
-        -
-        timedelta(days=30)
-    )
+    start_date = end_date - timedelta(days=30)
 
-    start_string = (
-        start_date.strftime("%Y%m%d")
-    )
-
-    end_string = (
-        end_date.strftime("%Y%m%d")
-    )
+    start = start_date.strftime("%Y%m%d")
+    end = end_date.strftime("%Y%m%d")
 
     url = (
-        "https://power.larc.nasa.gov/api/"
-        "temporal/daily/point"
+        "https://power.larc.nasa.gov/api/temporal/"
+        "daily/point"
     )
 
     params = {
-
-        "parameters":
-            "PRECTOTCORR,"
-            "T2M,"
-            "RH2M,"
-            "WS2M",
-
-        "community":
-            "AG",
-
-        "longitude":
-            lon,
-
-        "latitude":
-            lat,
-
-        "start":
-            start_string,
-
-        "end":
-            end_string,
-
-        "format":
-            "JSON"
+        "parameters": ",".join([
+            "PRECTOTCORR",
+            "T2M",
+            "RH2M",
+            "WS10M"
+        ]),
+        "community": "AG",
+        "longitude": lon,
+        "latitude": lat,
+        "start": start,
+        "end": end,
+        "format": "JSON"
     }
 
     response = requests.get(
@@ -303,338 +192,305 @@ def get_nasa_power_weather(lat, lon):
     )
 
     if response.status_code != 200:
-
         raise Exception(
-            f"NASA POWER error: "
-            f"{response.status_code}"
+            f"NASA POWER error: {response.status_code}"
         )
 
     data = response.json()
 
-    parameter_data = (
-        data["properties"]["parameter"]
+    properties = data.get("properties", {})
+
+    parameter = properties.get(
+        "parameter",
+        {}
     )
 
-    precipitation = (
-        parameter_data["PRECTOTCORR"]
+    rainfall = parameter.get(
+        "PRECTOTCORR",
+        {}
     )
 
-    temperature_data = (
-        parameter_data["T2M"]
+    temperature = parameter.get(
+        "T2M",
+        {}
     )
 
-    humidity_data = (
-        parameter_data["RH2M"]
+    humidity = parameter.get(
+        "RH2M",
+        {}
     )
 
-    wind_data = (
-        parameter_data["WS2M"]
+    wind = parameter.get(
+        "WS10M",
+        {}
     )
 
-    rows = []
-
-    for date_string in precipitation.keys():
-
-        rain = precipitation.get(
-            date_string,
-            0
+    if not rainfall:
+        raise Exception(
+            "NASA POWER rainfall data missing"
         )
 
-        temp = temperature_data.get(
-            date_string,
-            None
+    # --------------------------------------------------------
+    # Convert dictionaries to ordered daily values
+    # --------------------------------------------------------
+
+    def clean_values(dictionary):
+
+        values = []
+
+        for value in dictionary.values():
+
+            try:
+
+                value = float(value)
+
+                # NASA POWER sometimes uses -999
+                # for missing values.
+
+                if value <= -900:
+                    continue
+
+                values.append(value)
+
+            except (TypeError, ValueError):
+                continue
+
+        return values
+
+    rain_values = clean_values(rainfall)
+    temp_values = clean_values(temperature)
+    humidity_values = clean_values(humidity)
+    wind_values = clean_values(wind)
+
+    if not rain_values:
+        raise Exception(
+            "NASA POWER rainfall values unavailable"
         )
 
-        humidity = humidity_data.get(
-            date_string,
-            None
-        )
+    # --------------------------------------------------------
+    # Rainfall calculations
+    # --------------------------------------------------------
 
-        wind = wind_data.get(
-            date_string,
-            None
-        )
+    rain_1d = sum(rain_values[-1:])
+    rain_3d = sum(rain_values[-3:])
+    rain_7d = sum(rain_values[-7:])
+    rain_14d = sum(rain_values[-14:])
+    rain_30d = sum(rain_values[-30:])
 
-        if rain is None or rain < -900:
+    last_30 = rain_values[-30:]
 
-            rain = 0
-
-        if temp is None or temp < -900:
-
-            temp = 0
-
-        if humidity is None or humidity < -900:
-
-            humidity = 0
-
-        if wind is None or wind < -900:
-
-            wind = 0
-
-        rows.append({
-
-            "date":
-                datetime.strptime(
-                    date_string,
-                    "%Y%m%d"
-                ).date(),
-
-            "rain":
-                float(rain),
-
-            "temperature":
-                float(temp),
-
-            "humidity":
-                float(humidity),
-
-            "wind":
-                float(wind)
-        })
-
-    weather_df = pd.DataFrame(rows)
-
-    weather_df = (
-        weather_df
-        .sort_values("date")
+    max_rain_30d = (
+        max(last_30)
+        if last_30
+        else 0.0
     )
 
-    def rainfall_last_days(days):
-
-        values = (
-            weather_df
-            .tail(days)["rain"]
-        )
-
-        return float(
-            values.sum()
-        )
-
-    rain_1d = rainfall_last_days(1)
-
-    rain_3d = rainfall_last_days(3)
-
-    rain_7d = rainfall_last_days(7)
-
-    rain_14d = rainfall_last_days(14)
-
-    rain_30d = rainfall_last_days(30)
-
-    max_rain_30d = float(
-        weather_df["rain"]
-        .tail(30)
-        .max()
-    )
+    last_7 = rain_values[-7:]
 
     avg_rain_7d = (
-        rain_7d / 7
+        sum(last_7) / len(last_7)
+        if last_7
+        else 0.0
     )
 
     avg_rain_30d = (
-        rain_30d / 30
+        sum(last_30) / len(last_30)
+        if last_30
+        else 0.0
     )
 
-    latest = weather_df.iloc[-1]
+    # --------------------------------------------------------
+    # Actual weather values
+    # --------------------------------------------------------
 
-    temperature = float(
-        latest["temperature"]
+    temperature_value = (
+        temp_values[-1]
+        if temp_values
+        else 0.0
     )
 
-    humidity = float(
-        latest["humidity"]
+    humidity_value = (
+        humidity_values[-1]
+        if humidity_values
+        else 0.0
     )
 
-    wind_speed = float(
-        latest["wind"]
+    wind_value = (
+        wind_values[-1]
+        if wind_values
+        else 0.0
     )
 
-    features = {
+    result = {
 
-        "rain_1d_mm":
-            rain_1d,
+        "rain_1d_mm": float(rain_1d),
 
-        "rain_3d_mm":
-            rain_3d,
+        "rain_3d_mm": float(rain_3d),
 
-        "rain_7d_mm":
-            rain_7d,
+        "rain_7d_mm": float(rain_7d),
 
-        "rain_14d_mm":
-            rain_14d,
+        "rain_14d_mm": float(rain_14d),
 
-        "rain_30d_mm":
-            rain_30d,
+        "rain_30d_mm": float(rain_30d),
 
-        "max_rain_30d_mm":
-            max_rain_30d,
+        "max_rain_30d_mm": float(
+            max_rain_30d
+        ),
 
-        "avg_rain_7d_mm":
-            avg_rain_7d,
+        "avg_rain_7d_mm": float(
+            avg_rain_7d
+        ),
 
-        "avg_rain_30d_mm":
-            avg_rain_30d,
+        "avg_rain_30d_mm": float(
+            avg_rain_30d
+        ),
 
-        "temperature_C":
-            temperature,
+        "temperature_C": float(
+            temperature_value
+        ),
 
-        "humidity_percent":
-            humidity,
+        "humidity_percent": float(
+            humidity_value
+        ),
 
-        "wind_speed_mps":
-            wind_speed,
+        "wind_speed_mps": float(
+            wind_value
+        ),
 
-        "weather_source":
-            "NASA POWER"
+        "weather_source": "NASA POWER"
     }
 
-    print(
-        "NASA POWER fallback successful."
-    )
+    print("NASA POWER fallback successful.")
 
-    return features
+    print("NASA WEATHER DATA:")
+
+    print(result)
+
+    return result
 
 
 # ============================================================
 # MAIN WEATHER FUNCTION
 # ============================================================
 
-def get_weather_features(lat, lon):
+def get_weather(lat, lon):
 
-    cached = get_cached_weather(
-        lat,
-        lon
+    print("WEATHER FUNCTION START")
+
+    # --------------------------------------------------------
+    # Cache key
+    # --------------------------------------------------------
+
+    cache_key = (
+        round(float(lat), 2),
+        round(float(lon), 2)
     )
 
-    if cached is not None:
-
-        return cached
+    now = time.time()
 
     # --------------------------------------------------------
-    # TRY OPEN-METEO
+    # Check cache
+    # --------------------------------------------------------
+
+    if cache_key in _weather_cache:
+
+        cached_time, cached_data = (
+            _weather_cache[cache_key]
+        )
+
+        if now - cached_time < CACHE_SECONDS:
+
+            print(
+                "Using cached weather data."
+            )
+
+            return cached_data
+
+    # --------------------------------------------------------
+    # Try Open-Meteo
     # --------------------------------------------------------
 
     try:
 
-        features = (
-            get_open_meteo_weather(
-                lat,
-                lon
-            )
-        )
-
-        print(
-            "Open-Meteo weather successful."
-        )
-
-        save_cached_weather(
+        weather = get_open_meteo_weather(
             lat,
-            lon,
-            features
+            lon
         )
 
-        return features
+        _weather_cache[cache_key] = (
+            now,
+            weather
+        )
 
-    except Exception as open_meteo_error:
+        return weather
+
+    except Exception as e:
 
         print(
-            f"Open-Meteo failed: "
-            f"{open_meteo_error}"
+            f"Open-Meteo failed: {e}"
+        )
+
+        print(
+            "Open-Meteo unavailable."
         )
 
     # --------------------------------------------------------
-    # FALLBACK TO NASA POWER
+    # NASA POWER fallback
     # --------------------------------------------------------
 
     try:
 
-        features = (
-            get_nasa_power_weather(
-                lat,
-                lon
-            )
-        )
-
-        save_cached_weather(
+        weather = get_nasa_power_weather(
             lat,
-            lon,
-            features
+            lon
         )
 
-        return features
+        _weather_cache[cache_key] = (
+            now,
+            weather
+        )
 
-    except Exception as nasa_error:
+        return weather
+
+    except Exception as e:
 
         print(
-            f"NASA POWER failed: "
-            f"{nasa_error}"
+            f"NASA POWER failed: {e}"
         )
 
-        raise Exception(
-            "Both weather services are "
-            "currently unavailable."
-        )
+    # --------------------------------------------------------
+    # Final fallback
+    # --------------------------------------------------------
 
+    print(
+        "WARNING: All weather APIs failed."
+    )
 
-# ============================================================
-# LOCAL TEST
-# ============================================================
+    fallback = {
 
-if __name__ == "__main__":
+        "rain_1d_mm": 0.0,
 
-    lat = 25.5007
+        "rain_3d_mm": 0.0,
 
-    lon = 93.9854
+        "rain_7d_mm": 0.0,
 
-    try:
+        "rain_14d_mm": 0.0,
 
-        features = (
-            get_weather_features(
-                lat,
-                lon
-            )
-        )
+        "rain_30d_mm": 0.0,
 
-        print("")
-        print(
-            "========================================"
-        )
+        "max_rain_30d_mm": 0.0,
 
-        print(
-            "WEATHER FEATURES"
-        )
+        "avg_rain_7d_mm": 0.0,
 
-        print(
-            "========================================"
-        )
+        "avg_rain_30d_mm": 0.0,
 
-        for key, value in features.items():
+        "temperature_C": 0.0,
 
-            if isinstance(
-                value,
-                (int, float)
-            ):
+        "humidity_percent": 0.0,
 
-                print(
-                    f"{key:25s}: "
-                    f"{value:.3f}"
-                )
+        "wind_speed_mps": 0.0,
 
-            else:
+        "weather_source": "Fallback"
+    }
 
-                print(
-                    f"{key:25s}: "
-                    f"{value}"
-                )
-
-        print(
-            "========================================"
-        )
-
-    except Exception as error:
-
-        print("")
-        print(
-            "Weather system failed:"
-        )
-
-        print(error)
+    return fallback
