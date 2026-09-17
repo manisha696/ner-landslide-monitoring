@@ -494,3 +494,10 @@ def get_weather(lat, lon):
     }
 
     return fallback
+# ============================================================
+# COMPATIBILITY FUNCTION
+# live_prediction.py uses get_weather_features()
+# ============================================================
+
+def get_weather_features(lat, lon):
+    return get_weather(lat, lon)
